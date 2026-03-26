@@ -18,7 +18,7 @@
                BlueprintIdentifier = "E0035BD32EADA077001ACE5D"
                BuildableName = "StretchTimer Watch App.app"
                BlueprintName = "StretchTimer Watch App"
-               ReferencedContainer = "container:digitalCrownAccessory.xcodeproj">
+               ReferencedContainer = "container:StretchTimer.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -32,7 +32,7 @@
                BlueprintIdentifier = "E0035BCD2EADA077001ACE5D"
                BuildableName = "StretchTimer.app"
                BlueprintName = "StretchTimer"
-               ReferencedContainer = "container:digitalCrownAccessory.xcodeproj">
+               ReferencedContainer = "container:StretchTimer.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -57,7 +57,7 @@
                BlueprintIdentifier = "E0035BE22EADA079001ACE5D"
                BuildableName = "StretchTimer Watch AppTests.xctest"
                BlueprintName = "StretchTimer Watch AppTests"
-               ReferencedContainer = "container:digitalCrownAccessory.xcodeproj">
+               ReferencedContainer = "container:StretchTimer.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -68,7 +68,7 @@
                BlueprintIdentifier = "E0035BEC2EADA079001ACE5D"
                BuildableName = "StretchTimer Watch AppUITests.xctest"
                BlueprintName = "StretchTimer Watch AppUITests"
-               ReferencedContainer = "container:digitalCrownAccessory.xcodeproj">
+               ReferencedContainer = "container:StretchTimer.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -90,7 +90,7 @@
             BlueprintIdentifier = "E0035BD32EADA077001ACE5D"
             BuildableName = "StretchTimer Watch App.app"
             BlueprintName = "StretchTimer Watch App"
-            ReferencedContainer = "container:digitalCrownAccessory.xcodeproj">
+            ReferencedContainer = "container:StretchTimer.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -107,7 +107,7 @@
             BlueprintIdentifier = "E0035BD32EADA077001ACE5D"
             BuildableName = "StretchTimer Watch App.app"
             BlueprintName = "StretchTimer Watch App"
-            ReferencedContainer = "container:digitalCrownAccessory.xcodeproj">
+            ReferencedContainer = "container:StretchTimer.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

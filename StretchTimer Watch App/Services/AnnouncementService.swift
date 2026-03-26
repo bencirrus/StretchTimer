@@ -5,15 +5,12 @@ import WatchKit
 final class AnnouncementService {
     private let synthesizer = AVSpeechSynthesizer()
 
-    init() {
-        configureAudioSession()
-    }
-
     func announce(_ text: String, volume: Float = 1.0) {
         #if targetEnvironment(simulator)
         return
         #endif
         guard !text.isEmpty else { return }
+        configureAudioSessionIfNeeded()
         if synthesizer.isSpeaking {
             synthesizer.stopSpeaking(at: .immediate)
         }
@@ -32,17 +29,34 @@ final class AnnouncementService {
         WKInterfaceDevice.current().play(.success)
     }
 
-    func stop() {
-        synthesizer.stopSpeaking(at: .immediate)
+    func playStartCountdownHaptic() {
+        WKInterfaceDevice.current().play(.directionDown)
     }
 
-    private func configureAudioSession() {
+    func playStartCountdownCompletionHaptic() {
+        WKInterfaceDevice.current().play(.success)
+    }
+
+    func stop() {
+        synthesizer.stopSpeaking(at: .immediate)
+        deactivateAudioSessionIfNeeded()
+    }
+
+    private func configureAudioSessionIfNeeded() {
         do {
             let audioSession = AVAudioSession.sharedInstance()
             try audioSession.setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try audioSession.setActive(true)
         } catch {
             // Keep running without voice if audio session setup fails.
+        }
+    }
+
+    private func deactivateAudioSessionIfNeeded() {
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+        } catch {
+            // Ignore deactivation failures; the next announcement will reactivate the session.
         }
     }
 }

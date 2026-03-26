@@ -1,20 +1,31 @@
 import SwiftUI
+import UserNotifications
+
+private enum OnboardingChoice {
+    case alertsOnly
+    case healthKit
+}
 
 struct ContentView: View {
     @StateObject private var viewModel = TimerViewModel()
     @State private var hasTouchedSettings = false
     @State private var appliedRecommendedDefaults = false
-    @State private var reducedProgress: CGFloat = 0
-    @State private var crownDetent: Double = 0
+    @State private var crownDetent: Int = 0
+    @State private var isCrownAccessoryVisible = false
     @FocusState private var crownFocused: Bool
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+    @State private var showNotificationsExplainer = false
+    @State private var pendingChoice: OnboardingChoice? = nil
+    @State private var healthKitErrorMessage: String?
 
     private let minVolume: Double = 0.1
     private let maxVolume: Double = 1.0
     private let volumeStep: Double = 0.05
 
     var body: some View {
-        if viewModel.needsOnboarding {
+        if viewModel.isCompletingOnboarding {
+            onboardingProgressScreen
+        } else if viewModel.needsOnboarding {
             welcomeScreen
         } else {
             mainScreen
@@ -28,86 +39,111 @@ struct ContentView: View {
         }
     }
 
-    private var welcomeScreen: some View {
-        VStack(spacing: 12) {
-            Text("Alerts Only for countdown & sound on idle/off display.")
+    private var onboardingProgressScreen: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+            Text("Setting up StretchTimer")
+                .font(.headline)
+            Text("Finishing permissions and saving your choice.")
                 .font(.footnote)
-                .multilineTextAlignment(.center)
-
-            Text("Smart Stack & Alerts = HealthKit No read/write.")
-                .font(.footnote)
-                .multilineTextAlignment(.center)
-
-            Text("HealthKit background is in development.")
-                .font(.caption2)
                 .foregroundStyle(.secondary)
-
-            Button("Alerts Only") {
-                viewModel.selectBackgroundMode(.alertsOnly)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-
-            Button("Enable HealthKit") {
-                viewModel.selectBackgroundMode(.healthKit)
-            }
-            .buttonStyle(.bordered)
+                .multilineTextAlignment(.center)
         }
-        .padding(12)
+        .padding(16)
+    }
+
+    private var welcomeScreen: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Choose your setup")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.bottom, 2)
+
+                // Enable HealthKit option
+                VStack(alignment: .leading, spacing: 6) {
+                    Button("Enable HealthKit") {
+                        pendingChoice = .healthKit
+                        showNotificationsExplainer = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel("Enable HealthKit")
+                    .accessibilityHint("Enable background running and Smart Stack using workout permission only.")
+
+                    Text("…only to run in background and Smart Stack. No health data read/write.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Divider()
+
+                // Alerts Only option
+                VStack(alignment: .leading, spacing: 6) {
+                    Button("Alerts Only") {
+                        pendingChoice = .alertsOnly
+                        showNotificationsExplainer = true
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel("Alerts Only")
+                    .accessibilityHint("Use the app without HealthKit. You can enable it later.")
+
+                    Text("Use the app without HealthKit. You can turn it on later.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 6)
+        }
+        .sheet(isPresented: $showNotificationsExplainer) {
+            NotificationsExplainerView(
+                onAllow: {
+                    requestNotificationAuthorization { _ in
+                        proceedAfterExplainer()
+                    }
+                },
+                onNotNow: {
+                    proceedAfterExplainer()
+                }
+            )
+        }
+        .alert("HealthKit Permission Needed", isPresented: healthKitAlertPresented) {
+            Button("OK", role: .cancel) {
+                healthKitErrorMessage = nil
+            }
+        } message: {
+            Text(healthKitErrorMessage ?? "Workout permission is required for background sessions.")
+        }
     }
 
     private var mainScreen: some View {
         VStack(spacing: 10) {
-            timerActionButton
-            settingsPanel
+            crownHost
+            if !shouldHideControlsForReducedLuminance && !viewModel.isPreparingStart {
+                settingsPanel
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .contentShape(Rectangle())
-        .focusable(true)
-        .focused($crownFocused)
-        .digitalCrownRotation(
-            detent: $crownDetent,
-            from: 0,
-            through: viewModel.isRunning ? maxVolumeSteps : maxDurationSteps,
-            by: 1,
-            sensitivity: .low,
-            isContinuous: false,
-            isHapticFeedbackEnabled: true
-        ) { _ in
-            if viewModel.isRunning {
-                let volume = minVolume + (crownDetent * volumeStep)
-                viewModel.updateSessionVolume(Float(clamp(volume, minVolume, maxVolume)))
-            } else {
-                let seconds = TimerViewModel.minTotalSeconds + Int(crownDetent) * TimerViewModel.totalStepSeconds
-                viewModel.updateTotalDurationSeconds(clamp(seconds, TimerViewModel.minTotalSeconds, TimerViewModel.maxTotalSeconds))
-            }
-        } onIdle: {
-            syncCrownValue()
-        }
         .onAppear {
             syncCrownValue()
-            crownFocused = true
-            syncReducedProgress()
             viewModel.updateDisplayDimmed(isLuminanceReduced)
         }
-        .onTapGesture { crownFocused = true }
         .onChange(of: viewModel.isRunning) { _, _ in
             syncCrownValue()
-            crownFocused = true
-            syncReducedProgress()
-        }
-        .onChange(of: viewModel.currentPhase) { _, _ in
-            syncReducedProgress()
+            isCrownAccessoryVisible = false
         }
         .onChange(of: isLuminanceReduced) { _, _ in
             viewModel.updateDisplayDimmed(isLuminanceReduced)
-            syncReducedProgress()
         }
         .onChange(of: viewModel.totalDurationSeconds) { _, _ in
             if !viewModel.isRunning {
                 syncCrownValue()
-                syncReducedProgress()
             }
         }
         .onChange(of: viewModel.sessionVolume) { _, _ in
@@ -117,15 +153,102 @@ struct ContentView: View {
         }
     }
 
+    private var crownHost: some View {
+        timerActionButton
+            .contentShape(Rectangle())
+            .focusable(true)
+            .focused($crownFocused)
+            .digitalCrownRotation(
+                detent: $crownDetent,
+                from: 0,
+                through: viewModel.isRunning ? maxVolumeSteps : maxDurationSteps,
+                by: 1,
+                sensitivity: .low,
+                isContinuous: false,
+                isHapticFeedbackEnabled: true
+            ) { _ in
+                isCrownAccessoryVisible = viewModel.isRunning
+                if viewModel.isRunning {
+                    let volume = minVolume + (Double(crownDetent) * volumeStep)
+                    viewModel.updateSessionVolume(Float(clamp(volume, minVolume, maxVolume)))
+                } else {
+                    let seconds = TimerViewModel.minTotalSeconds + crownDetent * TimerViewModel.totalStepSeconds
+                    viewModel.updateTotalDurationSeconds(clamp(seconds, TimerViewModel.minTotalSeconds, TimerViewModel.maxTotalSeconds))
+                }
+            } onIdle: {
+                isCrownAccessoryVisible = false
+                syncCrownValue()
+            }
+            .digitalCrownAccessory {
+                if viewModel.isRunning && isCrownAccessoryVisible {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.caption2)
+                }
+            }
+            .onAppear {
+                crownFocused = true
+            }
+            .onTapGesture {
+                crownFocused = true
+            }
+    }
+
     @ViewBuilder
     private var timerActionButton: some View {
-        let button = Button {
-            if viewModel.isRunning {
+        if viewModel.isRunning && isLuminanceReduced {
+            TimelineView(ExplicitTimelineSchedule(viewModel.dimmedTimelineDates)) { context in
+                timerButton(displayDate: context.date)
+            }
+        } else {
+            timerButton(displayDate: nil)
+        }
+    }
+
+    private func timerButton(displayDate: Date?) -> some View {
+        Button {
+            if viewModel.isRunning || viewModel.isPreparingStart {
                 viewModel.stop()
             } else {
                 viewModel.start()
             }
         } label: {
+            timerButtonLabel(displayDate: displayDate)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(timerButtonColor)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(timerButtonColor.opacity(0.14))
+        )
+        .overlay(timerButtonOverlay(displayDate: displayDate))
+    }
+
+    @ViewBuilder
+    private func timerButtonLabel(displayDate: Date?) -> some View {
+        if viewModel.isPreparingStart {
+            VStack(spacing: 4) {
+                Text("\(viewModel.startCountdownValue)")
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                Text("GET READY")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+            }
+        } else
+        if let displayDate, viewModel.isRunning && isLuminanceReduced {
+            VStack(spacing: 4) {
+                Spacer(minLength: 12)
+                Text(dimmedPhaseLabel(at: displayDate))
+                    .font(.title3)
+                    .fontWeight(.bold)
+                Spacer(minLength: 12)
+            }
+        } else {
             VStack(spacing: 4) {
                 Text(formatted(seconds: viewModel.isRunning ? viewModel.remainingSeconds : viewModel.totalDisplaySeconds))
                     .font(.system(size: 40, weight: .bold, design: .rounded))
@@ -143,33 +266,31 @@ struct ContentView: View {
                         .fontWeight(.semibold)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(viewModel.isRunning ? .red : .green)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill((viewModel.isRunning ? Color.red : Color.green).opacity(0.14))
-        )
-        .overlay(
-            Group {
-                if viewModel.isRunning {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.red, lineWidth: 6)
-                        ProgressRoundedRect(progress: progressForDisplay, cornerRadius: 18)
-                            .stroke(Color.green, style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
-                            .animation(isLuminanceReduced ? nil : .linear(duration: 0.2), value: progressForDisplay)
-                    }
-                } else {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.green, lineWidth: 6)
-                }
-            }
-        )
+    }
 
-        button
+    @ViewBuilder
+    private func timerButtonOverlay(displayDate: Date?) -> some View {
+        if viewModel.isRunning {
+            let progress = progressForDisplay(at: displayDate)
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.red, lineWidth: 6)
+                ProgressRoundedRect(progress: progress, cornerRadius: 18)
+                    .stroke(Color.green, style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
+                    .animation(isLuminanceReduced ? nil : .linear(duration: 0.2), value: progress)
+            }
+        } else {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(timerButtonColor, lineWidth: 6)
+        }
+    }
+
+    private var timerButtonColor: Color {
+        if viewModel.isPreparingStart {
+            return .orange
+        }
+        return viewModel.isRunning ? .red : .green
     }
 
     private var settingsPanel: some View {
@@ -193,11 +314,6 @@ struct ContentView: View {
                     .font(.footnote)
                     .disabled(viewModel.isRunning)
 
-                if viewModel.showsHealthKitInDevelopmentNotice {
-                    Text("HealthKit background is in development.")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
             }
             .padding(10)
             .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -228,6 +344,10 @@ struct ContentView: View {
 
     private var shouldShowRecommendationOverlay: Bool {
         !hasTouchedSettings && !viewModel.isRunning
+    }
+
+    private var shouldHideControlsForReducedLuminance: Bool {
+        viewModel.isRunning && isLuminanceReduced
     }
 
     private func durationRow(
@@ -272,27 +392,19 @@ struct ContentView: View {
     private func syncCrownValue() {
         if viewModel.isRunning {
             let steps = ((Double(viewModel.sessionVolume) - minVolume) / volumeStep).rounded()
-            crownDetent = clamp(steps, 0, maxVolumeSteps)
+            crownDetent = clamp(Int(steps), 0, maxVolumeSteps)
         } else {
-            let steps = Double((viewModel.totalDurationSeconds - TimerViewModel.minTotalSeconds) / TimerViewModel.totalStepSeconds)
+            let steps = (viewModel.totalDurationSeconds - TimerViewModel.minTotalSeconds) / TimerViewModel.totalStepSeconds
             crownDetent = clamp(steps, 0, maxDurationSteps)
         }
     }
 
-    private func syncReducedProgress() {
-        if !viewModel.isRunning {
-            reducedProgress = 0
-            return
-        }
-        reducedProgress = elapsedFraction
+    private var maxDurationSteps: Int {
+        (TimerViewModel.maxTotalSeconds - TimerViewModel.minTotalSeconds) / TimerViewModel.totalStepSeconds
     }
 
-    private var maxDurationSteps: Double {
-        Double((TimerViewModel.maxTotalSeconds - TimerViewModel.minTotalSeconds) / TimerViewModel.totalStepSeconds)
-    }
-
-    private var maxVolumeSteps: Double {
-        ((maxVolume - minVolume) / volumeStep).rounded()
+    private var maxVolumeSteps: Int {
+        Int(((maxVolume - minVolume) / volumeStep).rounded())
     }
 
     private func clamp<T: Comparable>(_ value: T, _ minValue: T, _ maxValue: T) -> T {
@@ -306,14 +418,99 @@ struct ContentView: View {
         return CGFloat(max(0.0, min(1.0, fraction)))
     }
 
-    private var progressForDisplay: CGFloat {
-        isLuminanceReduced ? reducedProgress : elapsedFraction
+    private func progressForDisplay(at displayDate: Date?) -> CGFloat {
+        if let displayDate, isLuminanceReduced, viewModel.isRunning {
+            return viewModel.elapsedFraction(at: displayDate)
+        }
+        return elapsedFraction
     }
 
     private func formatted(seconds: Int) -> String {
         let minutes = seconds / 60
         let secs = seconds % 60
         return String(format: "%d:%02d", minutes, secs)
+    }
+
+    private func dimmedPhaseLabel(at date: Date) -> String {
+        switch viewModel.phase(at: date) {
+        case .hold:
+            return "HOLD"
+        case .shift:
+            return "SHIFT"
+        case .none:
+            return viewModel.currentPhase == .hold ? "HOLD" : "SHIFT"
+        }
+    }
+
+    private func requestNotificationAuthorization(completion: @escaping (Bool) -> Void) {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            DispatchQueue.main.async {
+                completion(granted)
+            }
+        }
+    }
+
+    private func proceedAfterExplainer() {
+        let choice = pendingChoice
+        pendingChoice = nil
+        showNotificationsExplainer = false
+
+        switch choice {
+        case .alertsOnly:
+            viewModel.beginOnboardingResolution()
+            viewModel.selectBackgroundMode(.alertsOnly)
+            viewModel.finishOnboardingResolution()
+        case .healthKit:
+            viewModel.beginOnboardingResolution()
+            Task {
+                defer { viewModel.finishOnboardingResolution() }
+                do {
+                    try await viewModel.enableHealthKitMode()
+                } catch {
+                    healthKitErrorMessage = error.localizedDescription
+                }
+            }
+        case .none:
+            break
+        }
+    }
+
+    private var healthKitAlertPresented: Binding<Bool> {
+        Binding(
+            get: { healthKitErrorMessage != nil },
+            set: { if !$0 { healthKitErrorMessage = nil } }
+        )
+    }
+}
+
+private struct NotificationsExplainerView: View {
+    var onAllow: () -> Void
+    var onNotNow: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Enable Alerts")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .accessibilityAddTraits(.isHeader)
+
+                Text("...for interval timer sounds.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button("Allow Alerts", action: onAllow)
+                    .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity)
+
+                Button("Not now", action: onNotNow)
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 6)
+        }
     }
 }
 

@@ -38,6 +38,17 @@ final class NotificationScheduler {
         }
     }
 
+    func scheduleImmediateSessionCompleteNotification() {
+        requestAuthorizationIfNeeded()
+        clearPending()
+
+        let content = UNMutableNotificationContent()
+        content.title = "StretchTimer"
+        content.body = "Session complete"
+        content.sound = .default
+        schedule(content: content, in: 1)
+    }
+
     func clearPending() {
         if !pendingIdentifiers.isEmpty {
             center.removePendingNotificationRequests(withIdentifiers: pendingIdentifiers)

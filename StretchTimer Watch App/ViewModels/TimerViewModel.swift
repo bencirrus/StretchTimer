@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import SwiftUI
 import WatchKit
+import WidgetKit
 
 @MainActor
 final class TimerViewModel: ObservableObject {
@@ -10,6 +11,9 @@ final class TimerViewModel: ObservableObject {
     @Published var announcementsEnabled: Bool
     @Published var totalDurationSeconds: Int
     @Published var sessionVolume: Float
+    @Published private(set) var isCompletingOnboarding = false
+    @Published private(set) var isPreparingStart = false
+    @Published private(set) var startCountdownValue = 3
 
     @Published private(set) var isRunning = false
     @Published private(set) var currentPhase: TimerPhase = .hold
@@ -21,13 +25,10 @@ final class TimerViewModel: ObservableObject {
     private let announcementService: AnnouncementService
     private let workoutSessionController: WorkoutSessionController
     private let notificationScheduler: NotificationScheduler
-    private let extendedRuntimeController: ExtendedRuntimeSessionController
-    private let audioCuePlayer: AudioCuePlayer
+    private var startCountdownTask: Task<Void, Never>?
     private var ticker: AnyCancellable?
     private var phaseEndDate: Date?
     private var totalEndDate: Date?
-    private var lastCountdownSecond: Int?
-    private var lastCuePhase: TimerPhase?
 
     private enum Key {
         static let holdSeconds = "settings.holdSeconds"
@@ -47,15 +48,11 @@ final class TimerViewModel: ObservableObject {
     init(
         announcementService: AnnouncementService,
         workoutSessionController: WorkoutSessionController,
-        notificationScheduler: NotificationScheduler,
-        extendedRuntimeController: ExtendedRuntimeSessionController,
-        audioCuePlayer: AudioCuePlayer
+        notificationScheduler: NotificationScheduler
     ) {
         self.announcementService = announcementService
         self.workoutSessionController = workoutSessionController
         self.notificationScheduler = notificationScheduler
-        self.extendedRuntimeController = extendedRuntimeController
-        self.audioCuePlayer = audioCuePlayer
 
         let hold = UserDefaults.standard.object(forKey: Key.holdSeconds) as? Int ?? 30
         let shift = UserDefaults.standard.object(forKey: Key.shiftSeconds) as? Int ?? 10
@@ -83,22 +80,12 @@ final class TimerViewModel: ObservableObject {
         self.init(
             announcementService: AnnouncementService(),
             workoutSessionController: WorkoutSessionController(),
-            notificationScheduler: NotificationScheduler(),
-            extendedRuntimeController: ExtendedRuntimeSessionController(),
-            audioCuePlayer: AudioCuePlayer()
+            notificationScheduler: NotificationScheduler()
         )
     }
 
     var needsOnboarding: Bool {
         backgroundModeChoice == nil
-    }
-
-    var showsHealthKitInDevelopmentNotice: Bool {
-        backgroundModeChoice == .healthKit && !workoutSessionController.isAvailable
-    }
-
-    var isAnnouncementsAllowed: Bool {
-        true
     }
 
     var phaseTitle: String {
@@ -109,11 +96,82 @@ final class TimerViewModel: ObservableObject {
         isRunning ? totalRemainingSeconds : totalDurationSeconds
     }
 
+    var sessionStartDate: Date? {
+        guard let totalEndDate else { return nil }
+        return totalEndDate.addingTimeInterval(-TimeInterval(totalDurationSeconds))
+    }
+
+    var dimmedTimelineDates: [Date] {
+        guard isRunning,
+              let sessionStartDate,
+              let totalEndDate else { return [] }
+
+        var dates: [Date] = []
+        var cursor = sessionStartDate
+        var phase: TimerPhase = .hold
+
+        while cursor < totalEndDate {
+            cursor = cursor.addingTimeInterval(TimeInterval(duration(for: phase)))
+            if cursor <= totalEndDate {
+                dates.append(cursor)
+            }
+            phase = nextPhase(after: phase)
+        }
+
+        return dates
+    }
+
+    func phase(at date: Date) -> TimerPhase? {
+        guard isRunning,
+              let sessionStartDate,
+              let totalEndDate,
+              date < totalEndDate else { return nil }
+
+        var cursor = sessionStartDate
+        var phase: TimerPhase = .hold
+
+        while cursor < totalEndDate {
+            let nextBoundary = cursor.addingTimeInterval(TimeInterval(duration(for: phase)))
+            if date < nextBoundary {
+                return phase
+            }
+            cursor = nextBoundary
+            phase = nextPhase(after: phase)
+        }
+
+        return nil
+    }
+
+    func elapsedFraction(at date: Date) -> CGFloat {
+        guard let sessionStartDate,
+              let totalEndDate else { return 0 }
+
+        let total = max(1, totalEndDate.timeIntervalSince(sessionStartDate))
+        let elapsed = min(max(0, date.timeIntervalSince(sessionStartDate)), total)
+        return CGFloat(elapsed / total)
+    }
+
     func selectBackgroundMode(_ mode: BackgroundModeChoice) {
         backgroundModeChoice = mode
         UserDefaults.standard.set(mode.rawValue, forKey: Key.backgroundModeChoice)
         if mode == .alertsOnly {
             notificationScheduler.requestAuthorizationIfNeeded()
+        }
+    }
+
+    func beginOnboardingResolution() {
+        isCompletingOnboarding = true
+    }
+
+    func finishOnboardingResolution() {
+        isCompletingOnboarding = false
+    }
+
+    func enableHealthKitMode() async throws {
+        selectBackgroundMode(.healthKit)
+        try await workoutSessionController.requestAuthorizationIfNeeded()
+        guard workoutSessionController.isAuthorizedForBackgroundSession else {
+            throw WorkoutSessionError.authorizationDenied
         }
     }
 
@@ -168,15 +226,70 @@ final class TimerViewModel: ObservableObject {
     }
 
     func start() {
-        guard !isRunning else { return }
+        guard !isRunning, !isPreparingStart else { return }
 
         sanitizeAndPersistSettings()
+        beginStartCountdown()
+    }
+
+    func stop(clearNotifications: Bool = true) {
+        startCountdownTask?.cancel()
+        startCountdownTask = nil
+        isPreparingStart = false
+        startCountdownValue = 3
+
+        isRunning = false
+        currentPhase = .hold
+        phaseEndDate = nil
+        totalEndDate = nil
+
+        ticker?.cancel()
+        ticker = nil
+
+        workoutSessionController.stop()
+        if clearNotifications {
+            notificationScheduler.clearAll()
+        }
+        announcementService.stop()
+        remainingSeconds = holdSeconds
+        totalRemainingSeconds = totalDurationSeconds
+        SharedSessionStore.clearSession()
+        WidgetCenter.shared.reloadTimelines(ofKind: SharedSessionStore.widgetKind)
+    }
+
+    private func beginStartCountdown() {
+        isPreparingStart = true
+        startCountdownValue = 3
+        announcementService.playStartCountdownHaptic()
+
+        startCountdownTask = Task { [weak self] in
+            guard let self else { return }
+
+            for nextValue in [2, 1] {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, self.isPreparingStart else { return }
+                self.startCountdownValue = nextValue
+                if nextValue == 1 {
+                    self.announcementService.playStartCountdownCompletionHaptic()
+                } else {
+                    self.announcementService.playStartCountdownHaptic()
+                }
+            }
+
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled, self.isPreparingStart else { return }
+            self.startCountdownTask = nil
+            self.startRunningSession()
+        }
+    }
+
+    private func startRunningSession() {
+        isPreparingStart = false
+        startCountdownValue = 3
         isRunning = true
         currentPhase = .hold
         totalRemainingSeconds = totalDurationSeconds
         totalEndDate = Date().addingTimeInterval(TimeInterval(totalDurationSeconds))
-        lastCountdownSecond = nil
-        lastCuePhase = currentPhase
 
         startTickerIfNeeded()
         beginPhase(.hold)
@@ -187,30 +300,14 @@ final class TimerViewModel: ObservableObject {
         case .healthKit:
             workoutSessionController.startIfAvailable()
         }
-    }
 
-    func stop() {
-        isRunning = false
-        currentPhase = .hold
-        phaseEndDate = nil
-        totalEndDate = nil
-        lastCountdownSecond = nil
-        lastCuePhase = nil
-
-        ticker?.cancel()
-        ticker = nil
-
-        extendedRuntimeController.stop()
-        workoutSessionController.stop()
-        notificationScheduler.clearAll()
-        announcementService.stop()
-        remainingSeconds = holdSeconds
-        totalRemainingSeconds = totalDurationSeconds
+        syncSharedSessionState()
     }
 
     private var effectiveBackgroundMode: BackgroundModeChoice {
         guard backgroundModeChoice == .healthKit else { return .alertsOnly }
-        return workoutSessionController.isAvailable ? .healthKit : .alertsOnly
+        guard workoutSessionController.isAvailable else { return .alertsOnly }
+        return workoutSessionController.isAuthorizedForBackgroundSession ? .healthKit : .alertsOnly
     }
 
     private func sanitizeAndPersistSettings() {
@@ -246,10 +343,11 @@ final class TimerViewModel: ObservableObject {
             let totalSeconds = max(0, Int(totalEndDate.timeIntervalSinceNow.rounded(.down)))
             totalRemainingSeconds = totalSeconds
             if totalSeconds == 0 {
-                if WKExtension.shared().applicationState == .active {
-                    announcementService.playSessionCompleteHaptic()
+                announcementService.playSessionCompleteHaptic()
+                if effectiveBackgroundMode == .alertsOnly || WKExtension.shared().applicationState == .active {
+                    notificationScheduler.scheduleImmediateSessionCompleteNotification()
                 }
-                stop()
+                stop(clearNotifications: false)
                 return
             }
         }
@@ -258,30 +356,19 @@ final class TimerViewModel: ObservableObject {
         let seconds = max(0, Int(endDate.timeIntervalSinceNow.rounded(.down)))
         remainingSeconds = seconds
 
-        if lastCuePhase != currentPhase {
-            lastCountdownSecond = nil
-            lastCuePhase = currentPhase
-        }
-
-        if seconds >= 1 && seconds <= 3 && lastCountdownSecond != seconds {
-            lastCountdownSecond = seconds
-            if shouldPlayForegroundAudio {
-                playCountdownCue(for: currentPhase, second: seconds)
-            }
-        }
-
         if seconds == 0 {
             transitionToNextPhase()
+            return
         }
     }
 
-    private func beginPhase(_ phase: TimerPhase) {
+    private func beginPhase(_ phase: TimerPhase, announcePhaseStart: Bool = true) {
         currentPhase = phase
         let duration = duration(for: phase)
         remainingSeconds = duration
         phaseEndDate = Date().addingTimeInterval(TimeInterval(duration))
 
-        if announcementsEnabled && !isDisplayDimmed {
+        if announcePhaseStart && announcementsEnabled && !isDisplayDimmed {
             announcementService.announce(phase.startAnnouncement, volume: sessionVolume)
         }
 
@@ -290,45 +377,18 @@ final class TimerViewModel: ObservableObject {
             let isFinalPhase = totalRemaining <= duration
             notificationScheduler.scheduleIntervalNotifications(phase: phase, duration: duration, isFinalPhase: isFinalPhase)
         }
+
+        syncSharedSessionState()
     }
 
     private func transitionToNextPhase() {
         guard isRunning else { return }
 
         let completed = currentPhase
-        if shouldPlayForegroundAudio {
-            playEndCue(for: completed)
-        }
         announcementService.playPhaseTransitionHaptic(for: completed)
 
         let next: TimerPhase = (completed == .hold) ? .shift : .hold
         beginPhase(next)
-    }
-
-    private func playCountdownCue(for phase: TimerPhase, second: Int) {
-        let name: String
-        switch (phase, second) {
-        case (.hold, 3): name = "Audio/hold_3.aiff"
-        case (.hold, 2): name = "Audio/hold_2.aiff"
-        case (.hold, 1): name = "Audio/hold_1.aiff"
-        case (.shift, 3): name = "Audio/shift_3.aiff"
-        case (.shift, 2): name = "Audio/shift_2.aiff"
-        case (.shift, 1): name = "Audio/shift_1.aiff"
-        default: return
-        }
-        let multiplier: Float
-        switch second {
-        case 3: multiplier = 0.25
-        case 2: multiplier = 0.5
-        case 1: multiplier = 0.75
-        default: multiplier = 1.0
-        }
-        audioCuePlayer.play(named: name, volume: sessionVolume * multiplier)
-    }
-
-    private func playEndCue(for phase: TimerPhase) {
-        let name = (phase == .hold) ? "Audio/hold_end.aiff" : "Audio/shift_end.aiff"
-        audioCuePlayer.play(named: name, volume: sessionVolume)
     }
 
     private func duration(for phase: TimerPhase) -> Int {
@@ -338,8 +398,8 @@ final class TimerViewModel: ObservableObject {
         }
     }
 
-    var shouldPlayForegroundAudio: Bool {
-        WKExtension.shared().applicationState == .active || isDisplayDimmed
+    private func nextPhase(after phase: TimerPhase) -> TimerPhase {
+        phase == .hold ? .shift : .hold
     }
 
     func updateDisplayDimmed(_ dimmed: Bool) {
@@ -348,5 +408,14 @@ final class TimerViewModel: ObservableObject {
             announcementService.stop()
             notificationScheduler.clearPending()
         }
+    }
+
+    private func syncSharedSessionState() {
+        SharedSessionStore.updateSession(
+            isActive: isRunning,
+            phase: currentPhase,
+            sessionEndDate: totalEndDate
+        )
+        WidgetCenter.shared.reloadTimelines(ofKind: SharedSessionStore.widgetKind)
     }
 }
