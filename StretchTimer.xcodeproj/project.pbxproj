@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		E0035BD52EADA077001ACE5D /* StretchTimer Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = E0035BD42EADA077001ACE5D /* StretchTimer Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F01A00012F900001001ACE5D /* StretchTimerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F01A00002F900001001ACE5D /* StretchTimerWidgetExtension.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,13 @@
 			remoteGlobalIDString = E0035BD32EADA077001ACE5D;
 			remoteInfo = "StretchTimer Watch App";
 		};
+		F01A00022F900001001ACE5D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E0035BC82EADA077001ACE5D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F01A000A2F900001001ACE5D;
+			remoteInfo = StretchTimerWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -46,6 +54,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F01A00032F900001001ACE5D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F01A00012F900001001ACE5D /* StretchTimerWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +73,7 @@
 		E0035BE32EADA079001ACE5D /* StretchTimer Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "StretchTimer Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E0035BED2EADA079001ACE5D /* StretchTimer Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "StretchTimer Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E040BDEF2F56570300203C78 /* StretchTimer Watch App.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "StretchTimer Watch App.xctestplan"; sourceTree = "<group>"; };
+		F01A00002F900001001ACE5D /* StretchTimerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = StretchTimerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -70,6 +90,16 @@
 		E0035BF02EADA079001ACE5D /* StretchTimer Watch AppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "StretchTimer Watch AppUITests";
+			sourceTree = "<group>";
+		};
+		F01A00042F900001001ACE5D /* Config */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Config;
+			sourceTree = "<group>";
+		};
+		F01A00052F900001001ACE5D /* StretchTimerWidgetExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = StretchTimerWidgetExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -96,6 +126,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F01A00062F900001001ACE5D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -103,8 +140,10 @@
 			isa = PBXGroup;
 			children = (
 				E040BDEF2F56570300203C78 /* StretchTimer Watch App.xctestplan */,
+				F01A00042F900001001ACE5D /* Config */,
 				E0035BD82EADA077001ACE5D /* StretchTimer Watch App */,
 				E0035BE62EADA079001ACE5D /* StretchTimer Watch AppTests */,
+				F01A00052F900001001ACE5D /* StretchTimerWidgetExtension */,
 				E0035BF02EADA079001ACE5D /* StretchTimer Watch AppUITests */,
 				E0035BCF2EADA077001ACE5D /* Products */,
 			);
@@ -117,6 +156,7 @@
 				E0035BD42EADA077001ACE5D /* StretchTimer Watch App.app */,
 				E0035BE32EADA079001ACE5D /* StretchTimer Watch AppTests.xctest */,
 				E0035BED2EADA079001ACE5D /* StretchTimer Watch AppUITests.xctest */,
+				F01A00002F900001001ACE5D /* StretchTimerWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -150,10 +190,12 @@
 				E0035BD02EADA077001ACE5D /* Sources */,
 				E0035BD12EADA077001ACE5D /* Frameworks */,
 				E0035BD22EADA077001ACE5D /* Resources */,
+				F01A00032F900001001ACE5D /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F01A00072F900001001ACE5D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E0035BD82EADA077001ACE5D /* StretchTimer Watch App */,
@@ -211,6 +253,28 @@
 			productReference = E0035BED2EADA079001ACE5D /* StretchTimer Watch AppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		F01A000A2F900001001ACE5D /* StretchTimerWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F01A000D2F900001001ACE5D /* Build configuration list for PBXNativeTarget "StretchTimerWidgetExtension" */;
+			buildPhases = (
+				F01A00082F900001001ACE5D /* Sources */,
+				F01A00062F900001001ACE5D /* Frameworks */,
+				F01A00092F900001001ACE5D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F01A00052F900001001ACE5D /* StretchTimerWidgetExtension */,
+			);
+			name = StretchTimerWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = StretchTimerWidgetExtension;
+			productReference = F01A00002F900001001ACE5D /* StretchTimerWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -219,7 +283,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2600;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 2640;
 				TargetAttributes = {
 					E0035BCD2EADA077001ACE5D = {
 						CreatedOnToolsVersion = 26.0.1;
@@ -235,9 +299,12 @@
 						CreatedOnToolsVersion = 26.0.1;
 						TestTargetID = E0035BD32EADA077001ACE5D;
 					};
+					F01A000A2F900001001ACE5D = {
+						CreatedOnToolsVersion = 26.3;
+					};
 				};
 			};
-			buildConfigurationList = E0035BCB2EADA077001ACE5D /* Build configuration list for PBXProject "StretchTimer" */;
+			buildConfigurationList = E0035BCB2EADA077001ACE5D /* Build configuration list for PBXProject "digitalCrownAccessory" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -253,6 +320,7 @@
 			targets = (
 				E0035BCD2EADA077001ACE5D /* StretchTimer */,
 				E0035BD32EADA077001ACE5D /* StretchTimer Watch App */,
+				F01A000A2F900001001ACE5D /* StretchTimerWidgetExtension */,
 				E0035BE22EADA079001ACE5D /* StretchTimer Watch AppTests */,
 				E0035BEC2EADA079001ACE5D /* StretchTimer Watch AppUITests */,
 			);
@@ -288,6 +356,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F01A00092F900001001ACE5D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -312,6 +387,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F01A00082F900001001ACE5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -329,6 +411,11 @@
 			isa = PBXTargetDependency;
 			target = E0035BD32EADA077001ACE5D /* StretchTimer Watch App */;
 			targetProxy = E0035BEE2EADA079001ACE5D /* PBXContainerItemProxy */;
+		};
+		F01A00072F900001001ACE5D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F01A000A2F900001001ACE5D /* StretchTimerWidgetExtension */;
+			targetProxy = F01A00022F900001001ACE5D /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -460,13 +547,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "StretchTimer Watch App/StretchTimer Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = StretchTimer;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKBackgroundModes = "physical-therapy";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/StretchTimer Watch App-Info.plist";
 				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -493,13 +579,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "StretchTimer Watch App/StretchTimer Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = StretchTimer;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKBackgroundModes = "physical-therapy";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/StretchTimer Watch App-Info.plist";
 				INFOPLIST_KEY_WKWatchOnly = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -643,10 +728,67 @@
 			};
 			name = Release;
 		};
+		F01A000B2F900001001ACE5D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = StretchTimerWidgetExtension/StretchTimerWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/StretchTimerWidgetExtension-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.TheCorp.StretchTimer.watchkitapp.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		F01A000C2F900001001ACE5D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = StretchTimerWidgetExtension/StretchTimerWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/StretchTimerWidgetExtension-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = net.TheCorp.StretchTimer.watchkitapp.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		E0035BCB2EADA077001ACE5D /* Build configuration list for PBXProject "StretchTimer" */ = {
+		E0035BCB2EADA077001ACE5D /* Build configuration list for PBXProject "digitalCrownAccessory" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E0035BF52EADA079001ACE5D /* Debug */,
@@ -687,6 +829,15 @@
 			buildConfigurations = (
 				E0035C022EADA079001ACE5D /* Debug */,
 				E0035C032EADA079001ACE5D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F01A000D2F900001001ACE5D /* Build configuration list for PBXNativeTarget "StretchTimerWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F01A000B2F900001001ACE5D /* Debug */,
+				F01A000C2F900001001ACE5D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
