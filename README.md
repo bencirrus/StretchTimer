@@ -3,19 +3,21 @@
 **An interval-timer for watchOS built w/Xcode by Apple powered by Coding Intelligence + Codex from OpenAI**
 
 ## The health recommendation for desk-bound workers is to stretch regularly
-- **Adjust time and intervals:** press START to go with defaults or adjust total time with the watch crown.
+- **Adjust time, intervals or volume:** press START to go with defaults or adjust total time before starting and volume after with the watch crown.
 - **Dismiss the recommendation reminder:** adjust times for holding stretches and shifting positions.
-- **Toggle Announce / Alert:** to get familiarized with the hold / shift sounds.
-- **Track progress:** the frame color indicates session progress while the counter shows intervals.
+- **Toggle Announce / Alert:** to get familiarized with the hold / shift sounds when display dimms or app in background.
+- **Track progress:** frame color indicates session progress while the counter shows intervals.
+- **Keep session active:** in the background with the HealthKit workout-permission path.
+- **Active session in Smart Stack:** if app is in background.
 
 ## App requirements in this version:
 - **watchOS** 26.4 Public Beta.
-- **Xcode** 26.3.
+- **Xcode** 26.4.
 - **UI optimized** for 46mm case.
 
 ## Notes for this version
-- Reinstall if the Alerts Only was select at first launch
-- Otherwise, it's feature complete
+- Reinstall to select Enable HealthKit if the Alerts Only was selected at first launch
+- - This is a watch-only app.
 
 ---
 Review this health recommendation for context and routines: https://ehs.stanford.edu/wp-content/uploads/Stretches-for-Office-Workers.pdf
@@ -26,5 +28,5 @@ Review this health recommendation for context and routines: https://ehs.stanford
 ![launch screen](screenshots/launch1.png)
 ![launch scroll down](screenshots/launch2.png)
 ![alert screen](screenshots/alert.png)
-![welcom screen](screenshots/welcome.png)
+![welcome screen](screenshots/welcome.png)
 ![session screen](screenshots/session.png)
