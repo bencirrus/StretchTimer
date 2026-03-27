@@ -17,7 +17,7 @@
 
 ## Notes for this version
 - Reinstall to select Enable HealthKit if the Alerts Only was selected at first launch
-- - This is a watch-only app.
+- This is a watch-only app.
 
 ---
 Review this health recommendation for context and routines: https://ehs.stanford.edu/wp-content/uploads/Stretches-for-Office-Workers.pdf
